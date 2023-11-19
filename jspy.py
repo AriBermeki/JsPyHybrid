@@ -3,10 +3,15 @@ from queue import Queue
 from threading import Event
 import json
 from logging import getLogger, ERROR
-from fastapi import FastAPI
-from starlette.websockets import WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from fastapi_socketio import SocketManager
+from fastapi.middleware.cors import CORSMiddleware
+from pathlib import Path
+import mimetypes
+import random
 
 getLogger('fastapi').setLevel(ERROR)
 log = getLogger(__name__)
@@ -22,13 +27,10 @@ class EventRegistry:
         self.log = getLogger(__name__)
         self.loop = asyncio.get_event_loop()
 
-
-
     async def javascript_respons(self, res):
         if res is not None:
             dd_dd = res.get('msg')
             self.javascript_respons_['javascript_respons'] = dd_dd
-       
 
     def pyfunction(self, func_name, func):
         self.functions[func_name] = func
@@ -110,11 +112,11 @@ class EventRegistry:
                 There is no predefined function with this name that the 
                 client asks the server to do. Please register this function on the server side.
                 """)
-    def calljs(self, func_name, args,result=None):
-        return asyncio.create_task(self.__cjsfunction(func_name=func_name,args=args, result=result))
-    
-    def js_response(self):
-        
+
+    async def calljs(self, func_name, args, result=None):
+        return asyncio.create_task(self.__cjsfunction(func_name=func_name, args=args, result=result))
+
+    async def js_response(self):
         responsa = self.javascript_respons_.get('javascript_respons')
         if responsa is not None:
             return responsa
