@@ -24,23 +24,26 @@ class EventRegistry:
 
 
 
-    def javascript_respons(self, res):
-        self.javascript_respons_['javascript_respons'] = res
+    async def javascript_respons(self, res):
+        if res is not None:
+            dd_dd = res.get('msg')
+            self.javascript_respons_['javascript_respons'] = dd_dd
+       
 
     def pyfunction(self, func_name, func):
         self.functions[func_name] = func
 
-    async def _jsfunction(self, func_name, args):
+    async def __jsfunction(self, func_name, args):
         self.jsfunctionregistry[func_name] = func_name
         data = {'func_name': func_name, 'args': args}
         result = json.dumps(data, default=lambda o: o.__class__.__name__)
         await self.socket_manager.emit('call_javascript_func', result)
 
-    async def jsfunction(self, func_name, args):
-        await self._jsfunction(func_name, args)
-        return self.javascript_respons_.get('javascript_respons', None)
+    async def __cjsfunction(self, func_name, args, result):
+        await self.__jsfunction(func_name, args)
+        return self.javascript_respons_.get('javascript_respons', result)
 
-    def pyclass(self, method_name, class_instance, method):
+    def register_class_method(self, method_name, class_instance, method):
         bound_method = getattr(class_instance, method_name, None)
         if bound_method:
             self.classmethods[method_name] = bound_method
@@ -107,5 +110,13 @@ class EventRegistry:
                 There is no predefined function with this name that the 
                 client asks the server to do. Please register this function on the server side.
                 """)
-    def calljs(self, func_name, args):
-        return asyncio.create_task(self.jsfunction(func_name=func_name,args=args))
+    def calljs(self, func_name, args,result=None):
+        return asyncio.create_task(self.__cjsfunction(func_name=func_name,args=args, result=result))
+    
+    def js_response(self):
+        
+        responsa = self.javascript_respons_.get('javascript_respons')
+        if responsa is not None:
+            return responsa
+        else:
+            return 'die resultat ist noch nicht da'
